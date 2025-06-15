@@ -11,7 +11,7 @@ namespace Player
         [SerializeField] private Rigidbody selfRb;
         
         [Header("Movement Settings")]
-        [SerializeField] private float horizontalSpeed = 10f;
+        [SerializeField] private float slidingSpeed;
         [SerializeField] private Vector3 targetPos;
 
         private void Awake()
@@ -22,9 +22,9 @@ namespace Player
 
         public void SlideHorizontal(float horizontalOffset)
         {
-            print(horizontalOffset);
-            Vector3 movementVector = new Vector3(horizontalOffset * Time.deltaTime * horizontalSpeed, 0, 0);
-            selfRb.MovePosition(selfTransform.position + movementVector);
+            targetPos = selfTransform.position + new Vector3(horizontalOffset * slidingSpeed, 0, 0);
+            targetPos = Vector3.Lerp(selfTransform.position, targetPos, Time.deltaTime);
+            selfRb.MovePosition(targetPos);
         }
     }
 }

@@ -10,15 +10,15 @@ namespace Player
         
         [Header("Input Data")]
         [SerializeField] private Vector2 lastTouchPos;
-        [SerializeField] private float horizontalOffset;
+        [SerializeField] private float slidingDirection;
         [SerializeField] private bool isTouch;
         
-        public bool CanSlideHorizontal => Mathf.Abs(horizontalOffset) > MIN_HORIZONTAL_OFFSET_THRESHOLD && isTouch;
+        public bool CanSlideHorizontal => Mathf.Abs(slidingDirection) > MIN_HORIZONTAL_OFFSET_THRESHOLD && isTouch;
 
 
         public float HandleInput()
         {
-            horizontalOffset = 0f;
+            slidingDirection = 0f;
             isTouch = false;
 
             if (Input.touchCount > 0)
@@ -31,21 +31,22 @@ namespace Player
                 else if (touch.phase == TouchPhase.Moved)
                 {
                     Vector2 delta = touch.position - lastTouchPos;
-                    horizontalOffset = delta.x / (Screen.width / 10f);
+                    slidingDirection = delta.x / (Screen.width / 10f);
+                    slidingDirection = Mathf.Clamp(slidingDirection, -1f, 1f);
                     lastTouchPos = touch.position;
-                    isTouch = Mathf.Abs(horizontalOffset) > MIN_HORIZONTAL_OFFSET_THRESHOLD;
+                    isTouch = Mathf.Abs(slidingDirection) > MIN_HORIZONTAL_OFFSET_THRESHOLD;
                 }
             }
 #if UNITY_EDITOR            
             else
             {
                 float axis = Input.GetAxis("Horizontal");
-                horizontalOffset = Mathf.Abs(axis) > MIN_HORIZONTAL_OFFSET_THRESHOLD ? axis : 0f;
-                isTouch = Mathf.Abs(horizontalOffset) > MIN_HORIZONTAL_OFFSET_THRESHOLD;
+                slidingDirection = Mathf.Abs(axis) > MIN_HORIZONTAL_OFFSET_THRESHOLD ? axis : 0f;
+                isTouch = Mathf.Abs(slidingDirection) > MIN_HORIZONTAL_OFFSET_THRESHOLD;
             }
 #endif
             
-            return horizontalOffset;
+            return slidingDirection;
         }
     }
 }
