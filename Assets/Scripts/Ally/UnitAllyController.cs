@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using Framework;
 using UnityEngine;
 
@@ -8,18 +9,20 @@ namespace Ally
     {
         [Header("Self Components")]
         [SerializeField] private Rigidbody selfRb;
+        
+        [Header("Unit Ally Components")]
+        [SerializeField] private UnitAllyAction action;
 
         private void Awake()
         {
             selfRb = GetComponent<Rigidbody>();
+            
+            action = GetComponent<UnitAllyAction>();
         }
 
-        private void OnCollisionEnter(Collision other)
+        private void Start()
         {
-            if (other.gameObject.CompareTag(KeySave.EnemyTag))
-            {
-                Destroy(other.gameObject);
-            }
+            StartCoroutine(action.ShootForwardCoroutine());
         }
     }
 }

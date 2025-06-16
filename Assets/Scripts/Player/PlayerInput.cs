@@ -14,9 +14,10 @@ namespace Player
         [SerializeField] private bool isTouch;
         
         public bool CanSlideHorizontal => Mathf.Abs(slidingDirection) > MIN_HORIZONTAL_OFFSET_THRESHOLD && isTouch;
+        public float SlidingDirection => slidingDirection;
 
 
-        public float HandleInput()
+        public void HandleInput()
         {
             slidingDirection = 0f;
             isTouch = false;
@@ -45,8 +46,6 @@ namespace Player
                 isTouch = Mathf.Abs(slidingDirection) > MIN_HORIZONTAL_OFFSET_THRESHOLD;
             }
 #endif
-            
-            return slidingDirection;
         }
     }
 }

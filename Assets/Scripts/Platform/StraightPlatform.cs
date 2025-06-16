@@ -11,7 +11,7 @@ namespace Platform
 
         private void Update()
         {
-            transform.position += Vector3.back * (speed * Time.deltaTime);
+            // transform.position += Vector3.back * (speed * Time.deltaTime);
         }
     }
 }

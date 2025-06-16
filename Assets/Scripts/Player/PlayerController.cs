@@ -1,12 +1,11 @@
 ﻿using System;
+using Ally;
 using UnityEngine;
 
 namespace Player
 {
     public class PlayerController : MonoBehaviour
     {
-        
-        
         [Header("Player Components")]
         [SerializeField] private PlayerMovement playerMovement;
         [SerializeField] private PlayerInput playerInput;
@@ -19,10 +18,14 @@ namespace Player
 
         private void Update()
         {
-            float horizontalOffset = playerInput.HandleInput();
+            playerInput.HandleInput();
+        }
+
+        private void FixedUpdate()
+        {
             if (playerInput.CanSlideHorizontal)
             {
-                playerMovement.SlideHorizontal(horizontalOffset);
+                playerMovement.SlideHorizontal(playerInput.SlidingDirection);
             }
         }
     }
