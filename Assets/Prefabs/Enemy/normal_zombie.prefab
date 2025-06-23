@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 5701278924397590724}
   - component: {fileID: 1479138645844751109}
   - component: {fileID: 4620464322827078285}
-  - component: {fileID: 6952017153590749461}
+  - component: {fileID: 1072481870229113842}
   m_Layer: 0
   m_Name: normal_zombie
   m_TagString: Enemy
@@ -132,11 +132,11 @@ Rigidbody:
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 1
-  m_IsKinematic: 0
+  m_IsKinematic: 1
   m_Interpolate: 0
   m_Constraints: 118
   m_CollisionDetection: 0
---- !u!114 &6952017153590749461
+--- !u!114 &1072481870229113842
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -145,7 +145,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 7156395908179121597}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9ad68c6760114568b958ae7a6543524e, type: 3}
+  m_Script: {fileID: 11500000, guid: 7e9a7903bff94739a9bdaa162732ff42, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   selfRb: {fileID: 0}
+  selfTransform: {fileID: 0}
+  id: 0
+  isHit: 0

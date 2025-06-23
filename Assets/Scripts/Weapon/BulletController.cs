@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using Enemy;
 using Framework;
 using Framework.ObjectPooling;
 using UnityEngine;
@@ -13,24 +14,17 @@ namespace Weapon
         [SerializeField] private Rigidbody selfRb;
         
         [Header("Bullet Settings")]
-        [SerializeField] private float shootForce = 10f;
+        [SerializeField] private float shootForce = 20f;
+        public int index;
 
         private void Awake()
         {
             selfRb = GetComponent<Rigidbody>();
         }
 
-        private void OnCollisionEnter(Collision other)
-        {
-            if (other.gameObject.CompareTag(KeySave.EnemyTag))
-            {
-                Destroy(other.gameObject);
-                ObjectPooler.ReturnToPool(PoolingType.NormalBullet, this);
-            }
-        }
-
         public void Shoot(Vector3 direction)
         {
+            selfRb.velocity = Vector3.zero;
             selfRb.AddForce(direction * shootForce, ForceMode.Impulse);
             StartCoroutine(CoutDown());
         }

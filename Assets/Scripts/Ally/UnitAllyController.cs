@@ -22,7 +22,7 @@ namespace Ally
 
         private void Start()
         {
-            StartCoroutine(action.ShootForwardCoroutine());
+            // StartCoroutine(action.ShootForwardCoroutine());
         }
     }
 }
