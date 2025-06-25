@@ -1,5 +1,6 @@
 ﻿using System;
 using Enemy;
+using Framework;
 using Framework.ObjectPooling;
 using Manager;
 using Unity.Collections;
@@ -16,29 +17,28 @@ namespace Weapon
         [SerializeField] private float bulletSpeed = 20f;
         [SerializeField] private float bulletRadius = 0.5f;
         [SerializeField] private float enemyRadius = 0.5f;
-        // [SerializeField] private int maxBullets = 100;
-        // [SerializeField] private int maxEnemies = 50;
-        
-        [Header("Spatial Grid Settings")]
-        [SerializeField] private float cellSize = 2f;
-        [SerializeField] private int gridWidth = 10;
-        [SerializeField] private int gridHeight = 20;
         
         [SerializeField] private Transform[] bulletTransforms;
-        private NativeArray<BulletData> bulletData;
+        private NativeArray<BulletData> bulletDataNativeArray;
         
         [SerializeField] private Transform[] enemyTransforms;
-        private NativeArray<EnemyData> enemyData;
+        private NativeArray<EnemyData> enemyDataNativeArray;
+        private NativeArray<EnemyData> updatedEnemyDataNativeArray;
         
-        private NativeArray<int> spatialGrid;
-        private NativeArray<int> gridCounts;
         
-        private NativeArray<CollisionResult> collisionResults;
+        private NativeArray<int> EnemyIndicesInCell;
+        private NativeArray<int> EnemyCounterInCell;
+        
+        private NativeArray<CollisionResult> bulletCollisionResults;
         
         private SpatialGridJob spatialGridJob;
         private CollisionJob collisionJob;
         private JobHandle collisionJobHandle;
         JobHandle spatialGridJobHandle;
+
+        private bool jobsInProgress = false;
+
+        private bool AllJobsCompleted => collisionJobHandle.IsCompleted && spatialGridJobHandle.IsCompleted;
 
 
         private void Start()
@@ -46,18 +46,20 @@ namespace Weapon
             InitializeBullets();
             InitializeEnemies();
             InitializeSpatialGrid();
+            
+            //GetComponent<SpatialGridDebugger>()?.SetDebugData(EnemyIndicesInCell, EnemyCounterInCell, enemyDataNativeArray);
         }
 
         private void InitializeBullets()
         {
             bulletTransforms = new Transform[PoolingManager.MaxBullets];
-            bulletData = new NativeArray<BulletData>(PoolingManager.MaxBullets, Allocator.Persistent);
-            for (int i = 0; i < PoolingManager.MaxBullets; i++)
+            bulletDataNativeArray = new NativeArray<BulletData>(bulletTransforms.Length, Allocator.Persistent);
+            for (int i = 0; i < bulletTransforms.Length; i++)
             {
                 BulletController bulletController = ObjectPooler.GetFromPool<BulletController>(PoolingType.NormalBullet);
                 bulletController.index = i;
                 bulletTransforms[i] = bulletController.transform;
-                bulletData[i] = new BulletData()
+                bulletDataNativeArray[i] = new BulletData()
                 {
                     position = float3.zero,
                     velocity = float3.zero,
@@ -75,31 +77,33 @@ namespace Weapon
         void InitializeEnemies()
         {
             enemyTransforms = new Transform[PoolingManager.MaxEnemies];
-            enemyData = new NativeArray<EnemyData>(PoolingManager.MaxEnemies, Allocator.Persistent);
+            enemyDataNativeArray = new NativeArray<EnemyData>(enemyTransforms.Length, Allocator.Persistent);
+            updatedEnemyDataNativeArray = new NativeArray<EnemyData>(enemyTransforms.Length, Allocator.Persistent);
         
-            for (int i = 0; i < PoolingManager.MaxEnemies; i++)
+            for (int i = 0; i < enemyTransforms.Length; i++)
             {
                 UnitEnemyController enemy = ObjectPooler.GetFromPool<UnitEnemyController>(PoolingType.EnemyUnit);
                 Vector3 pos = new Vector3(UnityEngine.Random.Range(-4.5f, 4.5f), 0, UnityEngine.Random.Range(10f, 50f));
                 enemy.selfTransform.position = pos;
-                enemy.transform.position = pos;
+                enemy.id = i;
                 enemyTransforms[i] = enemy.transform;
-                enemyData[i] = new EnemyData
+                enemyDataNativeArray[i] = new EnemyData
                 {
-                    position = pos,
-                    isActive = true,
-                    radius = enemyRadius,
-                    health = 100
+                    Position = pos,
+                    IsActive = true,
+                    Radius = enemyRadius,
+                    Health = 100,
+                    HasValidPrevCell = false
                 };
             }
         }
         
         void InitializeSpatialGrid()
         {
-            int totalCells = gridWidth * gridHeight;
-            spatialGrid = new NativeArray<int>(totalCells * 32, Allocator.Persistent);
-            gridCounts = new NativeArray<int>(totalCells, Allocator.Persistent);
-            collisionResults = new NativeArray<CollisionResult>(PoolingManager.MaxBullets, Allocator.Persistent);
+            int totalCells = KeySave.GridWidth * KeySave.GridHeight;
+            EnemyIndicesInCell = new NativeArray<int>(totalCells * KeySave.MaxEnemyPerCell, Allocator.Persistent);
+            EnemyCounterInCell = new NativeArray<int>(totalCells, Allocator.Persistent);
+            bulletCollisionResults = new NativeArray<CollisionResult>(PoolingManager.MaxBullets, Allocator.Persistent);
         }
 
         void Update()
@@ -109,62 +113,75 @@ namespace Weapon
                 FireBullet();
             }
             
-            UpdateEnemyData();
-            ScheduleAllJobs();
+            if (!jobsInProgress)
+            {
+                ScheduleAllJobs();
+                jobsInProgress = true;
+            }
+            
         }
 
         private void LateUpdate()
         {
-            spatialGridJobHandle.Complete();
-            collisionJobHandle.Complete();
-
-            string tmp = "";
-            for (int i = 0; i < spatialGrid.Length; i++)
+            if (jobsInProgress && AllJobsCompleted)
             {
-                tmp += spatialGrid[i] + " ";
-            }
-            print(tmp);
+                spatialGridJobHandle.Complete();
+                collisionJobHandle.Complete();
+            
+                for (int i = 0; i < enemyDataNativeArray.Length; i++)
+                {
+                    enemyDataNativeArray[i] = updatedEnemyDataNativeArray[i];
+                }
 
-            ApplyCollisionResults();
-            UpdateBulletTransform();
+                ApplyCollisionResults();
+                UpdateBulletTransform();
+
+                jobsInProgress = false;
+            }
+            
         }
 
         private void ScheduleAllJobs()
         {
+            
+            // for(int i = 0 ; i < enemyDataNativeArray.Length; i++)
+            // {
+            //     updatedEnemyData[i] = enemyDataNativeArray[i];
+            // }
+
+            NativeArray<EnemyData> tmp = enemyDataNativeArray;
+            updatedEnemyDataNativeArray = enemyDataNativeArray;
+            enemyDataNativeArray = tmp;
+            
             spatialGridJob = new SpatialGridJob
             {
-                enemies = enemyData,
-                spatialGrid = spatialGrid,
-                gridCounts = gridCounts,
-                gridWidth = gridWidth,
-                gridHeight = gridHeight,
-                cellSize = cellSize
+                Enemies = enemyDataNativeArray,
+                EnemyIndicesInCell = EnemyIndicesInCell,
+                EnemyCounterInCell = EnemyCounterInCell,
+                UpdatedEnemies = updatedEnemyDataNativeArray
             };
             
             collisionJob = new CollisionJob()
             {
-                bullets = bulletData,
-                enemies = enemyData,
-                spatialGrid = spatialGrid,
-                gridCounts = gridCounts,
-                gridWidth = gridWidth,
-                gridHeight = gridHeight,
-                cellSize = cellSize,
-                collisionResults = collisionResults,
-                deltaTime = Time.deltaTime
+                Bullets = bulletDataNativeArray,
+                Enemies = enemyDataNativeArray,
+                EnemyIndicesInCell = EnemyIndicesInCell,
+                EnemyCounterInCell = EnemyCounterInCell,
+                BulletCollisionResults = bulletCollisionResults,
+                DeltaTime = Time.deltaTime
             };
 
-            spatialGridJobHandle = spatialGridJob.Schedule(enemyData.Length, 64);
-            collisionJobHandle = collisionJob.Schedule(bulletData.Length, 64, spatialGridJobHandle);
+            spatialGridJobHandle = spatialGridJob.Schedule(enemyDataNativeArray.Length, 64);
+            collisionJobHandle = collisionJob.Schedule(bulletDataNativeArray.Length, 64, spatialGridJobHandle);
         }
 
         private void UpdateBulletTransform()
         {
-            for (int i = 0; i < PoolingManager.MaxBullets; i++)
+            for (int i = 0; i < bulletTransforms.Length; i++)
             {
-                if (bulletData[i].isActive)
+                if (bulletDataNativeArray[i].isActive)
                 {
-                    bulletTransforms[i].position = bulletData[i].position;
+                    bulletTransforms[i].position = bulletDataNativeArray[i].position;
                 }
             }
         }
@@ -173,11 +190,11 @@ namespace Weapon
         {
             for (int i = 0; i < PoolingManager.MaxEnemies; i++)
             {
-                if (enemyData[i].isActive)
+                if (enemyDataNativeArray[i].IsActive)
                 {
-                    var enemy = enemyData[i];
-                    enemy.position = enemyTransforms[i].position;
-                    enemyData[i] = enemy;
+                    var enemy = enemyDataNativeArray[i];
+                    enemy.Position = enemyTransforms[i].position;
+                    enemyDataNativeArray[i] = enemy;
                 }
             }
         }
@@ -187,38 +204,38 @@ namespace Weapon
             BulletController bulletController = ObjectPooler.GetFromPool<BulletController>(PoolingType.NormalBullet);
             bulletController.transform.position = transform.position;
 
-            BulletData bullet = bulletData[bulletController.index];
+            BulletData bullet = bulletDataNativeArray[bulletController.index];
             bullet.position = transform.position;
             bullet.velocity = new float3(0, 0, 1) * bulletSpeed;
             bullet.isActive = true;
-            bulletData[bulletController.index] = bullet;
+            bulletDataNativeArray[bulletController.index] = bullet;
         }
 
         private void ApplyCollisionResults()
         {
-            for (int i = 0; i < PoolingManager.MaxBullets; i++)
+            for (int i = 0; i < bulletCollisionResults.Length; i++)
             {
-                CollisionResult collisionResult = collisionResults[i];
+                CollisionResult collisionResult = bulletCollisionResults[i];
 
-                if (collisionResult.isHit)
+                if (collisionResult.IsHit)
                 {
-                    BulletData bullet = bulletData[i];
+                    BulletData bullet = bulletDataNativeArray[i];
                     bullet.isActive = false;
-                    bulletData[i] = bullet;
+                    bulletDataNativeArray[i] = bullet;
                     ObjectPooler.ReturnToPool(PoolingType.NormalBullet, bulletTransforms[i].GetComponent<BulletController>());
                     
-                    if(collisionResult.enemyIndex >= 0 && collisionResult.enemyIndex < PoolingManager.MaxEnemies)
+                    if(collisionResult.EnemyIndex >= 0 && collisionResult.EnemyIndex < PoolingManager.MaxEnemies)
                     {
-                        EnemyData enemy = enemyData[collisionResult.enemyIndex];
-                        enemy.health -= 100; 
+                        EnemyData enemy = enemyDataNativeArray[collisionResult.EnemyIndex];
+                        enemy.Health -= 100;
                         
-                        if (enemy.health <= 0)
+                        if (enemy.Health <= 0)
                         {
-                            enemy.isActive = false;
-                            ObjectPooler.ReturnToPool(PoolingType.EnemyUnit, enemyTransforms[collisionResult.enemyIndex].GetComponent<UnitEnemyController>());
+                            enemy.IsActive = false;
+                            ObjectPooler.ReturnToPool(PoolingType.EnemyUnit, enemyTransforms[collisionResult.EnemyIndex].GetComponent<UnitEnemyController>());
                         }
                         
-                        enemyData[collisionResult.enemyIndex] = enemy;
+                        enemyDataNativeArray[collisionResult.EnemyIndex] = enemy;
                     }
                 }
             }
@@ -229,26 +246,30 @@ namespace Weapon
             collisionJobHandle.Complete();
             spatialGridJobHandle.Complete();
             
-            if (bulletData.IsCreated)
+            if (bulletDataNativeArray.IsCreated)
             {
-                bulletData.Dispose();
+                bulletDataNativeArray.Dispose();
             }
-            if (enemyData.IsCreated)
+            if (enemyDataNativeArray.IsCreated)
             {
-                enemyData.Dispose();
+                enemyDataNativeArray.Dispose();
             }
-            if (spatialGrid.IsCreated)
+            if (EnemyIndicesInCell.IsCreated)
             {
-                spatialGrid.Dispose();
+                EnemyIndicesInCell.Dispose();
             }
-            if (gridCounts.IsCreated)
+            if (EnemyCounterInCell.IsCreated)
             {
-                gridCounts.Dispose();
+                EnemyCounterInCell.Dispose();
+            }
+            if (updatedEnemyDataNativeArray.IsCreated)
+            {
+                updatedEnemyDataNativeArray.Dispose();
             }
 
-            if (collisionResults.IsCreated)
+            if (bulletCollisionResults.IsCreated)
             {
-                collisionResults.Dispose();
+                bulletCollisionResults.Dispose();
             }
         }
     }

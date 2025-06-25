@@ -2,7 +2,13 @@
 {
     public struct CollisionResult
     {
-        public bool isHit;
-        public int enemyIndex;
+        public bool IsHit;
+        public int EnemyIndex;
+        
+        public CollisionResult(bool isHit, int enemyIndex)
+        {
+            IsHit = isHit;
+            EnemyIndex = enemyIndex;
+        }
     }
 }

@@ -484,6 +484,7 @@ GameObject:
   m_Component:
   - component: {fileID: 932373336}
   - component: {fileID: 932373337}
+  - component: {fileID: 932373338}
   m_Layer: 0
   m_Name: check_enemy_point
   m_TagString: Untagged
@@ -500,7 +501,7 @@ Transform:
   m_GameObject: {fileID: 932373335}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.11, z: 0.165}
+  m_LocalPosition: {x: 0, y: 0.1, z: 0.165}
   m_LocalScale: {x: 5.1173, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -519,13 +520,29 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   bulletSpeed: 30
-  bulletRadius: 1
-  enemyRadius: 1
-  cellSize: 2
-  gridWidth: 10
-  gridHeight: 20
+  bulletRadius: 0.1
+  enemyRadius: 0.1
   bulletTransforms: []
   enemyTransforms: []
+--- !u!114 &932373338
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 932373335}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8972acd9e25f4e6d87e04fe19cf52a38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  showGrid: 1
+  showCounts: 1
+  showEnemyIndices: 1
+  cellHeightOffset: 0.1
+  emptyColor: {r: 1, g: 1, b: 1, a: 1}
+  occupiedColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  highlightColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!1 &1200088978
 GameObject:
   m_ObjectHideFlags: 0
@@ -692,6 +709,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   selfTransform: {fileID: 0}
   amount: 100
+  index: 0
 --- !u!1 &1790196162
 GameObject:
   m_ObjectHideFlags: 0

@@ -10,7 +10,7 @@ namespace Manager
     {
         [Header("Pooling Settings")]
         public static int MaxBullets = 100;
-        public static int MaxEnemies = 50;
+        public static int MaxEnemies = 100;
         
         [Header("Prefabs")]
         [SerializeField] private BulletController bulletPrefab;
@@ -18,8 +18,8 @@ namespace Manager
         
         private void Awake()
         {
-            ObjectPooler.SetUpPool(PoolingType.NormalBullet, 50, bulletPrefab);
-            ObjectPooler.SetUpPool(PoolingType.EnemyUnit, 200, unitEnemyPrefab);
+            ObjectPooler.SetUpPool(PoolingType.NormalBullet, MaxBullets, bulletPrefab);
+            ObjectPooler.SetUpPool(PoolingType.EnemyUnit, MaxEnemies, unitEnemyPrefab);
         }
     }
 }

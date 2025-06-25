@@ -10,7 +10,7 @@ namespace Framework.ObjectPooling
         
         private static List<Component>[] _poolList = new List<Component>[capacity];
 
-        private static readonly Transform poolParent = GameObject.FindGameObjectWithTag(KeySave.poolParent).transform;
+        private static readonly Transform poolParent = GameObject.FindGameObjectWithTag(KeySave.PoolParent).transform;
 
         public static void SetUpPool<T>(PoolingType type, int size, T prefab) where T : Component
         {
