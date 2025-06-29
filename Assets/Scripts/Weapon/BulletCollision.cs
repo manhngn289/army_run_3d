@@ -43,14 +43,14 @@ namespace Weapon
 
         private void Start()
         {
-            InitializeBullets();
+            IndexingBullets();
             InitializeEnemies();
             InitializeSpatialGrid();
             
             //GetComponent<SpatialGridDebugger>()?.SetDebugData(EnemyIndicesInCell, EnemyCounterInCell, enemyDataNativeArray);
         }
 
-        private void InitializeBullets()
+        private void IndexingBullets()
         {
             bulletTransforms = new Transform[PoolingManager.MaxBullets];
             bulletDataNativeArray = new NativeArray<BulletData>(bulletTransforms.Length, Allocator.Persistent);
